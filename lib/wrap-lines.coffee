@@ -10,12 +10,12 @@ module.exports =
     wrap: ->
         editor = atom.workspace.activePaneItem
         selection = editor.getSelection()
-        stext = selection.getText()
+        text = selection.getText()
         lineLength = atom.config.get("wrap-lines.lineLength")
 
-        if stext.length > 0
-            paras = (para.split(/\s+/) for para in stext.split(/\n\n+/))
-        else
+        prefix = ''
+
+        if text.length <= 0
             # paras = [editor.lineForBufferRow(editor.getCursorScreenRow()).split(/\s+/)]
             # editor.selectLine()
             # selection = editor.getSelection()
@@ -39,16 +39,29 @@ module.exports =
 
             editor.setSelectedBufferRange([paraBegin,paraEnd])
             selection = editor.getSelection()
-            paras = [selection.getText().split(/\s+/)]
+            text = selection.getText()
+
+            match = text.match(/^[\s\t]+/)
+            if match
+                prefix = match[0]
+                text = text.replace(/^[\s\t]+/, '')
+            paras = [text.split(/\s+/)]
 
 
-        wrapped = ""
+        match = text.match(/^[\s\t]+/)
+        if match
+            prefix = match[0]
+            text = text.replace(/^[\s\t]+/, '')
+
+        paras = (para.split(/\s+/) for para in text.split(/\n\n+/))
+
+        wrapped = prefix
         for words in paras
             charcount = 0
             for w in words
                 n = w.length + 1
                 if charcount + n >= lineLength
-                    wrapped += "\n"
+                    wrapped += "\n#{prefix}"
                     charcount = 0
                 wrapped += w + " "
                 charcount += n
@@ -59,6 +72,19 @@ module.exports =
     unwrap: ->
         editor = atom.workspace.activePaneItem
         selection = editor.getSelection()
-        stext = selection.getText()
+        text = selection.getText()
+        prefix = ''
+
+        match = text.match(/^[\s\t]+/)
+        if match
+            prefix = match[0]
+            text = text
+                .replace(/^[\s\t]+/, '')
+                .replace(/\n[\s\t]+/g, '\n')
+                .replace(/\n\n+/g, "-0-")
+                .replace(/\n/g, " ")
+                .replace(/-0-/g, "\n\n")
+
         # TODO: find better dummy string than "-0-" for a paragraph split
-        selection.insertText(stext.replace(/\n\n+/g, "-0-").replace(/\n/g, " ").replace(/-0-/g, "\n\n")+"\n")
+
+        selection.insertText("#{prefix}#{text}\n")
